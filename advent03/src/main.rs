@@ -1,6 +1,8 @@
 extern crate time;
 use time::PreciseTime;
 
+use std::fmt;
+
 /*
 Memory layout:
 17  16  15  14  13 ..
@@ -52,15 +54,100 @@ fn solution1(input: &str) -> u32 {
 362  747  806--->   ...
 */
 
-fn solution2(input: &str) -> u32 {
-    let n : u32 = input.parse().unwrap();
-    let side = ((n as f32).sqrt().ceil() as u32) | 1;
-    let end = side.pow(2);
-    let half_side = (side + 1) / 2;
-    let rem = (n - 1) % (side - 1);
-    let distance = if rem < half_side {side - 1 - rem} else {rem};
-    println!("n={} side={} end={} rem={} d={}", n, side, end, rem, distance);
-    return distance;
+struct Matrix {
+    items: Vec<usize>,
+    side: usize,
+}
+
+impl Matrix {
+    pub fn new() -> Matrix {
+        let mut m = Matrix {
+            items: Vec::new(),
+            side: 20,
+        };
+        m.items.resize(m.side.pow(2), 0);
+        return m;
+    }
+
+    pub fn side(&self) -> usize {
+        return self.side;
+    }
+
+    fn index(&self, x: usize, y: usize) -> usize {
+        return x + self.side * y;
+    }
+
+    pub fn value(&self, x: usize, y: usize) -> usize {
+        let i = self.index(x, y);
+        return self.items[i];
+    }
+
+    pub fn set_value(&mut self, x: usize, y: usize, value: usize) {
+        let i = self.index(x, y);
+        self.items[i] = value;
+    }
+
+    pub fn calculate(&mut self, x: usize, y: usize) -> usize {
+        let value = 0
+            + self.value(x - 1, y - 1)
+            + self.value(x + 0, y - 1)
+            + self.value(x + 1, y - 1)
+            + self.value(x - 1, y + 0)
+            + self.value(x + 1, y + 0)
+            + self.value(x - 1, y + 1)
+            + self.value(x + 0, y + 1)
+            + self.value(x + 1, y + 1);
+        self.set_value(x, y, value);
+        return value;
+    }
+}
+
+impl fmt::Debug for Matrix {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Matrix {{\n");
+        for y in 0..self.side() {
+            for x in 0..self.side() {
+                let value = self.value(x, y);
+                if value != 0 {
+                    write!(f, " {:3}", value);
+                }
+            }
+            write!(f, "\n");
+        }
+        write!(f, "}}")
+    }
+}
+
+fn solution2(value: usize) -> usize {
+    let mut m = Matrix::new();
+    let mut x = m.side() / 2;
+    let mut y = m.side() / 2;
+
+    m.set_value(x, y, 1);
+    x += 1;
+    m.set_value(x, y, 1);
+    y += 1;
+
+    loop {
+        let result = m.calculate(x, y);
+        if value < result {
+            return result;
+        }
+
+        if m.value(x, y - 1) != 0 && m.value(x - 1, y) == 0 {
+            x -= 1;
+        } else if m.value(x + 1, y) != 0 && m.value(x, y - 1) == 0 {
+            y -= 1;
+        } else if m.value(x, y + 1) != 0 && m.value(x + 1, y) == 0 {
+            x += 1;
+        } else if m.value(x - 1, y) != 0 && m.value(x, y + 1) == 0 {
+            y += 1;
+        } else {
+            assert!(false);
+        }
+
+        println!("{:?}", m);
+    }
 }
 
 fn main() {
@@ -96,18 +183,16 @@ fn main() {
     println!("solution: {} ({:?})", s, start.to(end));
     }
 
-    assert_eq!(solution2("2"), 4);
-    assert_eq!(solution2("4"), 5);
-    assert_eq!(solution2("5"), 10);
-    assert_eq!(solution2("10"), 11);
-    assert_eq!(solution2("23"), 25);
-    assert_eq!(solution2("25"), 26);
-    assert_eq!(solution2("26"), 54);
+    assert_eq!(solution2(2), 4);
+    assert_eq!(solution2(4), 5);
+    assert_eq!(solution2(5), 10);
+    assert_eq!(solution2(10), 11);
+    assert_eq!(solution2(23), 25);
+    assert_eq!(solution2(25), 26);
+    assert_eq!(solution2(26), 54);
+    assert_eq!(solution2(362), 747);
+    assert_eq!(solution2(747), 806);
 
-    {
-    let start = PreciseTime::now();
-    let s = solution1(input);
-    let end = PreciseTime::now();
-    println!("solution: {} ({:?})", s, start.to(end));
-    }
+    let s = solution2(325489);
+    println!("solution: {}", s);
 }
