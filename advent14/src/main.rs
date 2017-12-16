@@ -1,3 +1,6 @@
+extern crate bit_vec;
+use bit_vec::BitVec;
+
 fn knot_hash_helper1(lengths: Vec<u16>, number_of_items: u16, number_of_rounds: u16) -> Vec<u16> {
     let mut items : Vec<u16> = (0..number_of_items).collect();
 
@@ -59,64 +62,47 @@ fn solution1(input: &String) -> u32 {
         knot_hash(&text)
             .iter()
             .for_each(|&x| {
-                count += (0..8).map(|b| bit(x, b) as u32).sum::<u32>();
+                count += (0..8).map(|b| bit(x, 7-b) as u32).sum::<u32>();
                 //println!("{:03} {:08b} {}", x, x, count);
             });
     });
     return count;
 }
 
-fn p(x: bool) -> char {
-    if x {'#'} else {'.'}
+fn flood_fill(m: &mut Vec<BitVec>, i: usize, j: usize) {
+    if m[i][j] {
+        m[i].set(j, false);
+        if i > 0   { flood_fill(m, i-1, j); }
+        if i < 127 { flood_fill(m, i+1, j); }
+        if j > 0   { flood_fill(m, i,   j-1); }
+        if j < 127 { flood_fill(m, i,   j+1); }
+    }
 }
 
 fn solution2(input: &String) -> u32 {
     let mut count = 0u32;
-    let mut q = [false; 128];
-    let mut a = [false; 128];
+    let mut m : Vec<BitVec> = Vec::new();
+
     (0..128).for_each(|i| {
         let text = format!("{}-{}", input, i.to_string());
-        let r = knot_hash(&text)
+        let row = knot_hash(&text)
             .iter()
             .flat_map(|&x| {
-                (0..8).map(|b| bit(x, b)).collect::<Vec<bool>>()
+                (0..8).map(|b| bit(x, 7-b)).collect::<BitVec>()
             })
-            .collect::<Vec<bool>>();
-        count += (0..128)
-            .fold((false, false, 0u8), |(x0, y0, count), i| {
-                let x = r[i];
-                let y = q[i];
-                let ref mut a = a[i];
-                let result = match (x, x0, y, y0) {
-                    //_.
-                    //.#
-                    (true, false, false, _) => { *a = true; (true, false, count + 1) },
-                    //..
-                    //##
-                    (true, true, false, false) => (true, false, count),
-                    //.#
-                    //##
-                    (true, true, true, false) => (true, true, count - 1),
-                    //#.
-                    //##
-                    (true, true, false, true) => (true, true, count),
-                    //##
-                    //##
-                    (true, true, true, true) => if *a {(true, true, count - 1)} else {(true, true, count)},
-                    //?#
-                    //.#
-                    (true, false, true, _) => (true, true, count),
-                    //??
-                    //?.
-                    (false, _, _, _) => (false, false, count),
-                };
-                //println!("{}{}", p(y0), p(y));
-                //println!("{}{}", p(x0), p(x));
-                //println!("---- {}", result.2);
-                result
-            }).2 as u32;
-        q.clone_from_slice(r.as_slice());
+            .collect::<BitVec>();
+            m.push(row);
     });
+
+    (0..128).for_each(|i| {
+        (0..128).for_each(|j| {
+            if m[i][j] {
+                count += 1;
+                flood_fill(&mut m, i, j);
+            }
+        });
+    });
+
     return count;
 }
 
@@ -135,8 +121,19 @@ mod tests {
     }
 
     #[test]
+    fn test_bit() {
+        assert_eq!(bit(0x00, 0), false);
+        assert_eq!(bit(0x00, 7), false);
+        assert_eq!(bit(0x01, 0), true);
+        assert_eq!(bit(0x01, 7), false);
+        assert_eq!(bit(0xff, 1), true);
+        assert_eq!(bit(0xff, 2), true);
+        assert_eq!(bit(0xff, 7), true);
+    }
+
+    #[test]
     fn test_solution1() {
-        //assert_eq!(solution1(&String::from("flqrgnkx")), 8108);
+        assert_eq!(solution1(&String::from("flqrgnkx")), 8108);
         assert_eq!(solution2(&String::from("flqrgnkx")), 1242);
     }
 }
@@ -147,6 +144,6 @@ fn main() {
     let s1 = solution1(&input);
     println!("solution 1: {}", s1);
 
-    //let s2 = solution2(&input);
-    //println!("solution 2: {}", s1);
+    let s2 = solution2(&input);
+    println!("solution 2: {}", s2);
 }
