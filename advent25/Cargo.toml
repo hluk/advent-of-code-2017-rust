@@ -1,0 +1,8 @@
+[package]
+name = "advent25"
+version = "0.1.0"
+authors = ["Lukas Holecek <hluk@email.cz>"]
+
+[dependencies]
+bit-vec = "0.4.4"
+regex = "0.2"
